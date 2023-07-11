@@ -7,12 +7,12 @@ import (
 	"os"
 	"regexp"
 	"strconv"
-	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type Matrix struct {
+	Forcast_year int
 	Birght_year  int
 	Birght_month int
 	Birght_day   int
@@ -67,8 +67,7 @@ func reduceUnder22(num int) int {
 }
 
 func (matrix *Matrix) calc() {
-	year := time.Now().Year()
-	matrix.Years_number = reduceUnder22(sumDigitsInNumber(year))
+	matrix.Years_number = reduceUnder22(sumDigitsInNumber(matrix.Forcast_year))
 	matrix.N3 = reduceUnder22(sumDigitsInNumber(matrix.Birght_year))
 	matrix.Plot = reduceUnder22(matrix.Birght_day + matrix.Years_number)
 	matrix.Lesson = reduceUnder22(matrix.Birght_month + matrix.Years_number)
@@ -103,6 +102,7 @@ func (matrix *Matrix) Process(birghtday string) {
 
 func main() {
 	birghtday := flag.String("b", "", "birghtday [26-04-1985]")
+	forecast := flag.Int("y", 2023, "forecast year")
 	daemon := flag.Bool("d", false, "run as daemon")
 	flag.Parse()
 	//fmt.Println(*birghtday)
@@ -115,7 +115,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	matrix := Matrix{}
+	matrix := Matrix{Forcast_year: *forecast}
 	matrix.Process(*birghtday)
 
 	fmt.Printf("%+v\n", matrix)
@@ -140,13 +140,15 @@ func runBot() {
 	for update := range updates {
 		if update.Message != nil { // If we got a message
 			log.Printf("[%s] %s", update.Message.From.UserName, update.Message.Text)
-			re := regexp.MustCompile(`(?P<day>\d+)-(?P<month>\d+)-(?P<year>\d+)`)
+			re := regexp.MustCompile(`(?P<day>\d+)-(?P<month>\d+)-(?P<year>\d+)\s+(?P<forcast_year>\d+)`)
 			if !re.Match([]byte(update.Message.Text)) {
-				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please use this form 31-02-1985")
+				msg := tgbotapi.NewMessage(update.Message.Chat.ID, "Please use this form 31-02-1985 2024")
 				bot.Send(msg)
 				continue
 			}
-			matrix := Matrix{}
+			r2 := re.FindAllStringSubmatch(update.Message.Text, -1)[0]
+			forcast_year, _ := strconv.Atoi(r2[len(r2)-1])
+			matrix := Matrix{Forcast_year: forcast_year}
 			matrix.Process(update.Message.Text)
 			msg := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("%+v\n", matrix))
 			msg.ReplyToMessageID = update.Message.MessageID
