@@ -1,0 +1,12 @@
+[Unit]
+Description=Teletype Bot
+After=network.target remote-fs.target nss-lookup.target nginx.target mongod.target
+[Service]
+WorkingDirectory=/tmp
+ExecStart=/usr/local/bin/matrix.sh
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=matrix
+User=root
+[Install]
+WantedBy=multi-user.target
